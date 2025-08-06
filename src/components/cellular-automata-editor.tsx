@@ -12,6 +12,7 @@ const CellularAutomataEditor = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationRow, setAnimationRow] = useState(0);
   const [roundedCorners, setRoundedCorners] = useState(0);
+  const [cellSize, setCellSize] = useState(20);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [selectedRuleInfo, setSelectedRuleInfo] = useState(null);
@@ -159,7 +160,7 @@ const CellularAutomataEditor = () => {
       });
       
       setAnimationRow(currentRow + 1);
-      animationRef.current = setTimeout(() => animate(currentRow + 1), 100);
+      animationRef.current = setTimeout(() => animate(currentRow + 1), 50);
     };
     
     animate(1);
@@ -172,6 +173,7 @@ const CellularAutomataEditor = () => {
     setRule(30);
     setRuleSearch('');
     setRoundedCorners(0);
+    setCellSize(20);
     setTool('draw');
     if (animationRef.current) {
       clearTimeout(animationRef.current);
@@ -218,7 +220,6 @@ const CellularAutomataEditor = () => {
 
   // Generate SVG with proper connected shapes
   const generateSVG = useCallback(() => {
-    const cellSize = 20;
     const width = cols * cellSize;
     const height = rows * cellSize;
     
@@ -233,14 +234,14 @@ const CellularAutomataEditor = () => {
         }
       }
       
-      // Generate path for connected shapes
-      let path = '';
+      // Find all connected components
       const visited = Array(rows).fill().map(() => Array(cols).fill(false));
+      const components = [];
       
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (matrix[r][c] && !visited[r][c]) {
-            // Find bounding box of connected component
+            // Find connected component using flood fill
             const component = [];
             const stack = [[r, c]];
             
@@ -257,23 +258,39 @@ const CellularAutomataEditor = () => {
             }
             
             if (component.length > 0) {
-              const minR = Math.min(...component.map(([r]) => r));
-              const maxR = Math.max(...component.map(([r]) => r));
-              const minC = Math.min(...component.map(([, c]) => c));
-              const maxC = Math.max(...component.map(([, c]) => c));
-              
-              const x = minC * cellSize;
-              const y = minR * cellSize;
-              const w = (maxC - minC + 1) * cellSize;
-              const h = (maxR - minR + 1) * cellSize;
-              
-              path += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${roundedCorners}" ry="${roundedCorners}" fill="#000"/>`;
+              components.push(component);
             }
           }
         }
       }
       
-      return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">${path}</svg>`;
+      // Generate SVG path for each component
+      let paths = '';
+      components.forEach(component => {
+        if (component.length === 1) {
+          // Single cell - just a rounded rectangle
+          const [r, c] = component[0];
+          const x = c * cellSize;
+          const y = r * cellSize;
+          paths += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="${roundedCorners}" ry="${roundedCorners}" fill="#000"/>`;
+        } else {
+          // Multiple cells - create a single path
+          const minR = Math.min(...component.map(([r]) => r));
+          const maxR = Math.max(...component.map(([r]) => r));
+          const minC = Math.min(...component.map(([, c]) => c));
+          const maxC = Math.max(...component.map(([, c]) => c));
+          
+          // Create a single rounded rectangle for the entire component
+          const x = minC * cellSize;
+          const y = minR * cellSize;
+          const w = (maxC - minC + 1) * cellSize;
+          const h = (maxR - minR + 1) * cellSize;
+          
+          paths += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${roundedCorners}" ry="${roundedCorners}" fill="#000"/>`;
+        }
+      });
+      
+      return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
     } else {
       // Generate individual rectangles without gaps
       let rects = '';
@@ -288,7 +305,7 @@ const CellularAutomataEditor = () => {
       }
       return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
     }
-  }, [grid, cols, rows, roundedCorners]);
+  }, [grid, cols, rows, roundedCorners, cellSize]);
 
   // Save as SVG
   const saveAsSVG = useCallback(() => {
@@ -318,199 +335,250 @@ const CellularAutomataEditor = () => {
     .filter(r => r.toString().includes(ruleSearch));
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-6 bg-white">
-      {/* Header Controls */}
-      <div className="mb-6 flex flex-wrap gap-4 items-center justify-between">
-        <h1 className="text-2xl font-bold">Cellular Automata Pattern Generator</h1>
-        <button
-          onClick={resetToDefaults}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-        >
-          <RotateCcw size={16} />
-          Reset Settings
-        </button>
-      </div>
-
-      {/* Configuration Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-        <div>
-          <label className="block text-sm font-medium mb-2">Columns</label>
-          <input
-            type="number"
-            min="5"
-            max="50"
-            value={cols}
-            onChange={(e) => setCols(Number(e.target.value))}
-            className="w-full px-3 py-2 border rounded-lg"
-          />
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Main Layout - Horizontal on wide screens, vertical on tall screens */}
+      <div className="flex flex-col lg:flex-row min-h-screen">
         
-        <div>
-          <label className="block text-sm font-medium mb-2">Rows</label>
-          <input
-            type="number"
-            min="5"
-            max="50"
-            value={rows}
-            onChange={(e) => setRows(Number(e.target.value))}
-            className="w-full px-3 py-2 border rounded-lg"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium mb-2">Rule</label>
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search rules..."
-              value={ruleSearch}
-              onChange={(e) => setRuleSearch(e.target.value)}
-              onFocus={() => setShowRuleDropdown(true)}
-              className="w-full pl-10 pr-3 py-2 border rounded-lg"
-            />
-            {showRuleDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto">
-                {filteredRules.map(r => (
-                  <div
-                    key={r}
-                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                    onClick={() => {
-                      setRule(r);
-                      setRuleSearch('');
-                      setShowRuleDropdown(false);
-                    }}
+        {/* Settings Panel - Fixed width on left */}
+        <div className="w-full lg:w-[460px] lg:min-w-[460px] bg-white border-r border-gray-200 p-6">
+          {/* Header */}
+          <h1 className="text-2xl font-bold mb-6">Cellular Automata Patterns Generation</h1>
+          
+          {/* Settings Section */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <label className="text-lg font-medium">Settings</label>
+              {(cols !== 14 || rows !== 14 || rule !== 30 || roundedCorners !== 0 || cellSize !== 20) && (
+                <button
+                  onClick={resetToDefaults}
+                  className="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <RotateCcw size={14} />
+                  Reset Settings
+                </button>
+              )}
+            </div>
+            
+            {/* Columns and Rows */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Columns</label>
+                <input
+                  type="number"
+                  min="5"
+                  max="50"
+                  value={cols}
+                  onChange={(e) => setCols(Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Rows</label>
+                <input
+                  type="number"
+                  min="5"
+                  max="50"
+                  value={rows}
+                  onChange={(e) => setRows(Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+            </div>
+            
+            {/* Rule Search */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Search Rules</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search rules..."
+                  value={ruleSearch}
+                  onChange={(e) => setRuleSearch(e.target.value)}
+                  onFocus={() => setShowRuleDropdown(true)}
+                  className="w-full pl-10 pr-3 py-2 border rounded-lg"
+                />
+                {showRuleDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto">
+                    {filteredRules.map(r => (
+                      <div
+                        key={r}
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                        onClick={() => {
+                          setRule(r);
+                          setRuleSearch('');
+                          setShowRuleDropdown(false);
+                        }}
+                      >
+                        <span>Rule {r}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showRuleInfo(r);
+                          }}
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          <Info size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Popular Rules Pills - Bigger */}
+            <div className="mb-6">
+              <div className="flex flex-wrap gap-2">
+                {popularRules.map(({ number, name }) => (
+                  <button
+                    key={number}
+                    onClick={() => setRule(number)}
+                    className={`inline-flex items-center gap-2 px-3 py-2 text-sm rounded-full transition-colors ${
+                      rule === number 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
                   >
-                    <span>Rule {r}</span>
+                    {number}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        showRuleInfo(r);
+                        showRuleInfo(number);
                       }}
-                      className="text-blue-500 hover:text-blue-700"
+                      className="hover:bg-blue-600 rounded-full p-1"
                     >
-                      <Info size={14} />
+                      <Info size={12} />
                     </button>
-                  </div>
+                  </button>
                 ))}
+              </div>
+            </div>
+            
+            {/* Rounded Corners Slider */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Rounded Corners</label>
+              <input
+                type="range"
+                min="0"
+                max="10"
+                value={roundedCorners}
+                onChange={(e) => setRoundedCorners(Number(e.target.value))}
+                className="w-full"
+              />
+              <div className="text-sm text-gray-600">{roundedCorners}px</div>
+            </div>
+            
+            {/* Cell Size Slider */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Cell Size</label>
+              <input
+                type="range"
+                min="8"
+                max="32"
+                step="2"
+                value={cellSize}
+                onChange={(e) => setCellSize(Number(e.target.value))}
+                className="w-full"
+              />
+              <div className="text-sm text-gray-600">{cellSize}px</div>
+            </div>
+            
+
+          </div>
+        </div>
+        
+        {/* Preview Area - Takes remaining space */}
+        <div className="flex-1 bg-gray-50 relative">
+          {/* Top Tool Bar */}
+          <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setTool('draw')}
+                className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
+                  tool === 'draw' ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-100 shadow-sm'
+                }`}
+                title="Draw"
+              >
+                <Pencil size={16} />
+              </button>
+              
+              <button
+                onClick={() => setTool('erase')}
+                className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
+                  tool === 'erase' ? 'bg-red-500 text-white' : 'bg-white hover:bg-gray-100 shadow-sm'
+                }`}
+                title="Erase"
+              >
+                <Eraser size={16} />
+              </button>
+              
+              <button
+                onClick={generateRandomSeed}
+                className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-100 shadow-sm rounded-lg transition-colors"
+                title="Random Seed"
+              >
+                <Shuffle size={16} />
+                Random Seed
+              </button>
+              
+              <button
+                onClick={generatePattern}
+                disabled={isAnimating}
+                className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors"
+                title="Generate Pattern"
+              >
+                <Play size={16} />
+                {isAnimating ? 'Generating...' : 'Generate Pattern'}
+              </button>
+            </div>
+            
+            {hasGenerated && (
+              <div className="flex gap-2">
+                <button
+                  onClick={resetImage}
+                  className="flex items-center justify-center w-10 h-10 bg-white hover:bg-gray-100 shadow-sm rounded-lg transition-colors"
+                  title="Reset Image"
+                >
+                  <RotateCcw size={16} />
+                </button>
+                
+                <button
+                  onClick={clearAll}
+                  className="flex items-center justify-center w-10 h-10 bg-white hover:bg-gray-100 shadow-sm rounded-lg transition-colors"
+                  title="Clear All"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             )}
           </div>
           
-          {/* Popular Rules Pills */}
-          <div className="mt-2 flex flex-wrap gap-1">
-            {popularRules.map(({ number, name }) => (
-              <button
-                key={number}
-                onClick={() => setRule(number)}
-                className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full transition-colors ${
-                  rule === number 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
+          {/* Grid Display - Top Aligned */}
+          <div className="flex flex-col items-center pt-20 pb-24 px-4">
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <div 
+                className="mx-auto"
+                style={{ 
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
+                  maxWidth: 'fit-content'
+                }}
               >
-                {number}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    showRuleInfo(number);
-                  }}
-                  className="hover:bg-blue-600 rounded-full p-0.5"
-                >
-                  <Info size={10} />
-                </button>
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium mb-2">Rounded Corners</label>
-          <input
-            type="range"
-            min="0"
-            max="10"
-            value={roundedCorners}
-            onChange={(e) => setRoundedCorners(Number(e.target.value))}
-            className="w-full"
-          />
-          <div className="text-sm text-gray-600">{roundedCorners}px</div>
-        </div>
-      </div>
-
-      {/* Tools */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setTool('draw')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            tool === 'draw' ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-          }`}
-        >
-          <Pencil size={16} />
-          Draw
-        </button>
-        
-        <button
-          onClick={() => setTool('erase')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            tool === 'erase' ? 'bg-red-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-          }`}
-        >
-          <Eraser size={16} />
-          Erase
-        </button>
-        
-        <button
-          onClick={generateRandomSeed}
-          className="flex items-center gap-2 px-4 py-2 bg-green-100 hover:bg-green-200 rounded-lg transition-colors"
-        >
-          <Shuffle size={16} />
-          Random Seed
-        </button>
-        
-        {hasGenerated && (
-          <>
-            <button
-              onClick={resetImage}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-100 hover:bg-orange-200 rounded-lg transition-colors"
-            >
-              <RotateCcw size={16} />
-              Reset Image
-            </button>
-            
-            <button
-              onClick={clearAll}
-              className="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
-            >
-              <Trash2 size={16} />
-              Clear All
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Grid Display */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg overflow-auto">
-        <div 
-          className="mx-auto"
-          style={{ 
-            display: 'grid',
-            gridTemplateColumns: `repeat(${cols}, 20px)`,
-            maxWidth: 'fit-content'
-          }}
-        >
           {grid.map((row, rowIndex) =>
             row.map((cell, colIndex) => {
               // Apply rounded corners live when roundedCorners > 0
               let cellStyle = {
-                width: '20px',
-                height: '20px',
+                width: `${cellSize}px`,
+                height: `${cellSize}px`,
                 backgroundColor: cell ? '#000' : '#fff',
-                border: '1px solid #d1d5db'
+                border: 'none'
               };
               
               if (roundedCorners > 0 && cell) {
-                // Check for connected neighbors to apply smart rounding
+                // For live preview, we'll use a simpler approach
+                // The SVG export will handle the proper connected component logic
                 const hasTop = rowIndex > 0 && grid[rowIndex - 1] && grid[rowIndex - 1][colIndex];
                 const hasBottom = rowIndex < rows - 1 && grid[rowIndex + 1] && grid[rowIndex + 1][colIndex];
                 const hasLeft = colIndex > 0 && grid[rowIndex] && grid[rowIndex][colIndex - 1];
@@ -527,7 +595,6 @@ const CellularAutomataEditor = () => {
                 else borderRadius += '0px';
                 
                 cellStyle.borderRadius = borderRadius;
-                cellStyle.border = 'none'; // Remove border for rounded cells
               }
               
               return (
@@ -549,58 +616,34 @@ const CellularAutomataEditor = () => {
               );
             })
           )}
-        </div>
-      </div>
-
-      {/* Generate Button */}
-      <div className="flex justify-center mb-20">
-        <button
-          onClick={generatePattern}
-          disabled={isAnimating}
-          className="flex items-center gap-2 px-8 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors text-lg font-medium"
-        >
-          <Play size={20} />
-          {isAnimating ? 'Generating...' : 'Generate Pattern'}
-        </button>
-      </div>
-
-      {/* Fixed Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-20">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Rounded Corners:</label>
-              <input
-                type="range"
-                min="0"
-                max="10"
-                value={roundedCorners}
-                onChange={(e) => setRoundedCorners(Number(e.target.value))}
-                className="w-24"
-              />
-              <span className="text-sm text-gray-600 w-8">{roundedCorners}px</span>
             </div>
           </div>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={saveAsSVG}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
-            >
-              <Download size={16} />
-              Save SVG
-            </button>
-            
-            <button
-              onClick={copyToFigma}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
-            >
-              <Copy size={16} />
-              Copy to Figma
-            </button>
+        </div>
+        
+        {/* Floating Bottom Bar - Centered in preview area */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20">
+          <div className="max-w-[560px] w-full mx-2 bg-white rounded-lg shadow-lg border">
+            <div className="flex items-center justify-center gap-4 p-4">
+              <button
+                onClick={saveAsSVG}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+              >
+                <Download size={16} />
+                Save SVG
+              </button>
+              
+              <button
+                onClick={copyToFigma}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+              >
+                <Copy size={16} />
+                Copy to Figma
+              </button>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
       {/* Rule Info Modal */}
       {showRuleModal && selectedRuleInfo !== null && (
