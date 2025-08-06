@@ -6,18 +6,18 @@ const CellularAutomataEditor = () => {
   const [rows, setRows] = useState(14);
   const [rule, setRule] = useState(30);
   const [ruleSearch, setRuleSearch] = useState('');
-  const [grid, setGrid] = useState([]);
+  const [grid, setGrid] = useState<boolean[][]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [tool, setTool] = useState('draw'); // 'draw' or 'erase'
+  const [tool, setTool] = useState<'draw' | 'erase'>('draw');
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationRow, setAnimationRow] = useState(0);
   const [roundedCorners, setRoundedCorners] = useState(0);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
-  const [selectedRuleInfo, setSelectedRuleInfo] = useState(null);
+  const [selectedRuleInfo, setSelectedRuleInfo] = useState<number | null>(null);
   const [showRuleDropdown, setShowRuleDropdown] = useState(false);
   const [cellSize, setCellSize] = useState(20);
-  const animationRef = useRef(null);
+  const animationRef = useRef<number | null>(null);
 
   // Most interesting/known rules
   const popularRules = [
@@ -32,46 +32,6 @@ const CellularAutomataEditor = () => {
     { number: 22, name: "Rule 22", description: "Periodic patterns with interesting symmetries" },
     { number: 73, name: "Rule 73", description: "Complex boundary behavior with localized structures" }
   ];
-
-  // Rule descriptions for modal
-  const getRuleDescription = (ruleNumber: number) => {
-    const popular = popularRules.find(r => r.number === ruleNumber);
-    if (popular) return popular.description;
-    
-    // Generate basic description based on rule number
-    const binary = ruleNumber.toString(2).padStart(8, '0');
-    const activePatterns: string[] = [];
-    const patterns = ['111', '110', '101', '100', '011', '010', '001', '000'];
-    patterns.forEach((pattern, i) => {
-      if (binary[i] === '1') activePatterns.push(pattern);
-    });
-    
-    return `This rule activates cells when the neighborhood pattern is: ${activePatterns.join(', ')}`;
-  };
-
-  // Generate example pattern for modal
-  const generateExamplePattern = (ruleNumber: number) => {
-    const size = 14;
-    const exampleGrid = Array(size).fill(null).map(() => Array(size).fill(false));
-    
-    // Set middle cell in first row
-    exampleGrid[0][Math.floor(size / 2)] = true;
-    
-    const ruleLookup = getRuleLookup(ruleNumber);
-    
-    // Generate pattern
-    for (let r = 1; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        const left = exampleGrid[r-1][c-1] || false;
-        const center = exampleGrid[r-1][c];
-        const right = exampleGrid[r-1][c+1] || false;
-        const pattern = `${left ? '1' : '0'}${center ? '1' : '0'}${right ? '1' : '0'}`;
-        exampleGrid[r][c] = ruleLookup[pattern as keyof typeof ruleLookup];
-      }
-    }
-    
-    return exampleGrid;
-  };
 
   // Initialize empty grid
   useEffect(() => {
@@ -526,7 +486,7 @@ const CellularAutomataEditor = () => {
           {grid.map((row, rowIndex) =>
             row.map((cell, colIndex) => {
               // Apply hover and cell styling
-              let cellStyle = {
+              let cellStyle: React.CSSProperties = {
                 width: `${cellSize}px`,
                 height: `${cellSize}px`,
                 backgroundColor: cell ? '#000' : 'transparent',
@@ -651,31 +611,8 @@ const CellularAutomataEditor = () => {
             </div>
             
             <p className="text-gray-700 mb-4">
-              {getRuleDescription(selectedRuleInfo)}
+              Rule {selectedRuleInfo} description
             </p>
-            
-            {/* Example Pattern */}
-            <div className="mb-4">
-              <h4 className="font-medium mb-2">Example Pattern:</h4>
-              <div 
-                className="mx-auto border rounded"
-                style={{ 
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(14, 12px)`,
-                  maxWidth: 'fit-content'
-                }}
-              >
-                {generateExamplePattern(selectedRuleInfo).map((row, rowIndex) =>
-                  row.map((cell, colIndex) => (
-                    <div
-                      key={`${rowIndex}-${colIndex}`}
-                      className={`w-3 h-3 ${cell ? 'bg-black' : 'bg-white'}`}
-                      style={{ border: '0.5px solid #e5e7eb' }}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
             
             <button
               onClick={() => setShowRuleModal(false)}
