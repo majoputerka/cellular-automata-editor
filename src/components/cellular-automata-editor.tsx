@@ -653,68 +653,67 @@ const CellularAutomataEditor = () => {
           </div>
         </div>
       </div>
-    </div>
 
-      {/* Rule Info Modal */}
-      {showRuleModal && selectedRuleInfo !== null && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-30">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Rule {selectedRuleInfo}</h3>
-              <button
-                onClick={() => setShowRuleModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <p className="text-gray-700 mb-4">
-              {getRuleDescription(selectedRuleInfo)}
-            </p>
-            
-            {/* Example Pattern */}
-            <div className="mb-4">
-              <h4 className="font-medium mb-2">Example Pattern:</h4>
-              <div 
-                className="mx-auto border rounded"
-                style={{ 
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(14, 12px)`,
-                  maxWidth: 'fit-content'
-                }}
-              >
-                {generateExamplePattern(selectedRuleInfo).map((row, rowIndex) =>
-                  row.map((cell, colIndex) => (
-                    <div
-                      key={`${rowIndex}-${colIndex}`}
-                      className={`w-3 h-3 ${cell ? 'bg-black' : 'bg-white'}`}
-                      style={{ border: '0.5px solid #e5e7eb' }}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-            
+    {/* Rule Info Modal */}
+    {showRuleModal && selectedRuleInfo !== null && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-30">
+        <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold">Rule {selectedRuleInfo}</h3>
             <button
               onClick={() => setShowRuleModal(false)}
-              className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              className="text-gray-500 hover:text-gray-700"
             >
-              Close
+              <X size={20} />
             </button>
           </div>
+          
+          <p className="text-gray-700 mb-4">
+            {getRuleDescription(selectedRuleInfo)}
+          </p>
+          
+          {/* Example Pattern */}
+          <div className="mb-4">
+            <h4 className="font-medium mb-2">Example Pattern:</h4>
+            <div 
+              className="mx-auto border rounded"
+              style={{ 
+                display: 'grid',
+                gridTemplateColumns: `repeat(14, 12px)`,
+                maxWidth: 'fit-content'
+              }}
+            >
+              {generateExamplePattern(selectedRuleInfo).map((row, rowIndex) =>
+                row.map((cell, colIndex) => (
+                  <div
+                    key={`${rowIndex}-${colIndex}`}
+                    className={`w-3 h-3 ${cell ? 'bg-black' : 'bg-white'}`}
+                    style={{ border: '0.5px solid #e5e7eb' }}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+          
+          <button
+            onClick={() => setShowRuleModal(false)}
+            className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+          >
+            Close
+          </button>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Click outside to close dropdown */}
-      {showRuleDropdown && (
-        <div 
-          className="fixed inset-0 z-5"
-          onClick={() => setShowRuleDropdown(false)}
-        />
-      )}
-    </div>
-  );
+    {/* Click outside to close dropdown */}
+    {showRuleDropdown && (
+      <div 
+        className="fixed inset-0 z-5"
+        onClick={() => setShowRuleDropdown(false)}
+      />
+    )}
+  </div>
+);
 };
 
 export default CellularAutomataEditor;
