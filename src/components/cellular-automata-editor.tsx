@@ -218,7 +218,7 @@ const CellularAutomataEditor = () => {
     setShowRuleModal(true);
   };
 
-  // Generate SVG with metaball-like smooth shapes
+  // Generate SVG with true metaball-like smooth shapes
   const generateSVG = useCallback(() => {
     const width = cols * cellSize;
     const height = rows * cellSize;
@@ -263,7 +263,7 @@ const CellularAutomataEditor = () => {
         }
       }
       
-      // Generate smooth SVG paths for each component with overlapping cells
+      // Generate smooth SVG paths for each component
       let paths = '';
       components.forEach(component => {
         if (component.length === 1) {
@@ -273,14 +273,21 @@ const CellularAutomataEditor = () => {
           const y = r * cellSize;
           paths += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="${roundedCorners}" ry="${roundedCorners}" fill="#000"/>`;
         } else {
-          // Multiple cells - create overlapping rounded rectangles for metaball effect
-          component.forEach(([r, c]) => {
-            const x = c * cellSize;
-            const y = r * cellSize;
-            // Slightly overlap cells for metaball effect
-            const overlap = 0.5;
-            paths += `<rect x="${x - overlap}" y="${y - overlap}" width="${cellSize + overlap * 2}" height="${cellSize + overlap * 2}" rx="${roundedCorners}" ry="${roundedCorners}" fill="#000"/>`;
-          });
+          // Multiple cells - create a single smooth path
+          const minR = Math.min(...component.map(([r]) => r));
+          const maxR = Math.max(...component.map(([r]) => r));
+          const minC = Math.min(...component.map(([, c]) => c));
+          const maxC = Math.max(...component.map(([, c]) => c));
+          
+          // Create a single rounded rectangle for the entire component
+          const x = minC * cellSize;
+          const y = minR * cellSize;
+          const w = (maxC - minC + 1) * cellSize;
+          const h = (maxR - minR + 1) * cellSize;
+          
+          // Use a smooth rounded rectangle with larger radius for metaball effect
+          const radius = Math.min(roundedCorners * 2, Math.min(w, h) / 2);
+          paths += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${radius}" ry="${radius}" fill="#000"/>`;
         }
       });
       
@@ -576,7 +583,7 @@ const CellularAutomataEditor = () => {
               >
           {grid.map((row, rowIndex) =>
             row.map((cell, colIndex) => {
-              // Apply rounded corners live when roundedCorners > 0
+              // Apply hover and cell styling
               let cellStyle = {
                 width: `${cellSize}px`,
                 height: `${cellSize}px`,
@@ -584,11 +591,13 @@ const CellularAutomataEditor = () => {
                 border: 'none'
               };
               
-              // Hover effect for any cell when drawing/erasing
-              if (tool === 'draw' && !cell) {
-                cellStyle.backgroundColor = '#f3f4f6';
-              } else if (tool === 'erase' && cell) {
-                cellStyle.backgroundColor = '#fee2e2';
+              // Hover effect for first row only when drawing/erasing
+              if (rowIndex === 0) {
+                if (tool === 'draw' && !cell) {
+                  cellStyle.backgroundColor = '#000'; // Show as filled on hover
+                } else if (tool === 'erase' && cell) {
+                  cellStyle.backgroundColor = '#fff'; // Show as empty on hover
+                }
               }
               
               if (roundedCorners > 0 && hasGenerated && cell) {
