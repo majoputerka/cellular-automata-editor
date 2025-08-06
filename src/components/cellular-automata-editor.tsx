@@ -218,7 +218,7 @@ const CellularAutomataEditor = () => {
     setShowRuleModal(true);
   };
 
-  // Generate SVG with proper connected shapes and rounded corners
+  // Generate SVG with metaball-like smooth shapes
   const generateSVG = useCallback(() => {
     const width = cols * cellSize;
     const height = rows * cellSize;
@@ -263,7 +263,7 @@ const CellularAutomataEditor = () => {
         }
       }
       
-      // Generate SVG path for each component with proper rounded corners
+      // Generate smooth SVG paths for each component
       let paths = '';
       components.forEach(component => {
         if (component.length === 1) {
@@ -273,18 +273,21 @@ const CellularAutomataEditor = () => {
           const y = r * cellSize;
           paths += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="${roundedCorners}" ry="${roundedCorners}" fill="#000"/>`;
         } else {
-          // Multiple cells - create a single rounded rectangle for the entire component
+          // Multiple cells - create a smooth path
           const minR = Math.min(...component.map(([r]) => r));
           const maxR = Math.max(...component.map(([r]) => r));
           const minC = Math.min(...component.map(([, c]) => c));
           const maxC = Math.max(...component.map(([, c]) => c));
           
+          // Create a smooth path around the component
           const x = minC * cellSize;
           const y = minR * cellSize;
           const w = (maxC - minC + 1) * cellSize;
           const h = (maxR - minR + 1) * cellSize;
           
-          paths += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${roundedCorners}" ry="${roundedCorners}" fill="#000"/>`;
+          // Use a smooth rounded rectangle with larger radius for metaball effect
+          const radius = Math.min(roundedCorners * 2, Math.min(w, h) / 2);
+          paths += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${radius}" ry="${radius}" fill="#000"/>`;
         }
       });
       
@@ -574,8 +577,13 @@ const CellularAutomataEditor = () => {
                 width: `${cellSize}px`,
                 height: `${cellSize}px`,
                 backgroundColor: cell ? '#000' : '#fff',
-                border: 'none'
+                border: '1px solid #e5e7eb'
               };
+              
+              // Hover effect for first row when drawing
+              if (rowIndex === 0 && tool === 'draw' && !cell) {
+                cellStyle.backgroundColor = '#f3f4f6';
+              }
               
               if (roundedCorners > 0 && cell) {
                 // For live preview, we'll use a simpler approach
@@ -585,17 +593,21 @@ const CellularAutomataEditor = () => {
                 const hasLeft = colIndex > 0 && grid[rowIndex] && grid[rowIndex][colIndex - 1];
                 const hasRight = colIndex < cols - 1 && grid[rowIndex] && grid[rowIndex][colIndex + 1];
                 
+                // Use larger radius for metaball effect
+                const radius = roundedCorners * 2;
+                
                 let borderRadius = '';
-                if (!hasTop && !hasLeft) borderRadius += `${roundedCorners}px `;
+                if (!hasTop && !hasLeft) borderRadius += `${radius}px `;
                 else borderRadius += '0px ';
-                if (!hasTop && !hasRight) borderRadius += `${roundedCorners}px `;
+                if (!hasTop && !hasRight) borderRadius += `${radius}px `;
                 else borderRadius += '0px ';
-                if (!hasBottom && !hasRight) borderRadius += `${roundedCorners}px `;
+                if (!hasBottom && !hasRight) borderRadius += `${radius}px `;
                 else borderRadius += '0px ';
-                if (!hasBottom && !hasLeft) borderRadius += `${roundedCorners}px`;
+                if (!hasBottom && !hasLeft) borderRadius += `${radius}px`;
                 else borderRadius += '0px';
                 
                 cellStyle.borderRadius = borderRadius;
+                cellStyle.border = 'none'; // Remove border for rounded cells
               }
               
               return (
