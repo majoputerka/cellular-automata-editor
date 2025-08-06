@@ -223,7 +223,7 @@ const CellularAutomataEditor = () => {
     const width = cols * cellSize;
     const height = rows * cellSize;
     
-    if (roundedCorners > 0) {
+    if (roundedCorners > 0 && hasGenerated) {
       // Create a binary matrix for filled cells
       const matrix = Array(rows).fill().map(() => Array(cols).fill(false));
       for (let r = 0; r < rows; r++) {
@@ -263,7 +263,7 @@ const CellularAutomataEditor = () => {
         }
       }
       
-      // Generate smooth SVG paths for each component
+      // Generate smooth SVG paths for each component with overlapping cells
       let paths = '';
       components.forEach(component => {
         if (component.length === 1) {
@@ -273,21 +273,14 @@ const CellularAutomataEditor = () => {
           const y = r * cellSize;
           paths += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="${roundedCorners}" ry="${roundedCorners}" fill="#000"/>`;
         } else {
-          // Multiple cells - create a smooth path
-          const minR = Math.min(...component.map(([r]) => r));
-          const maxR = Math.max(...component.map(([r]) => r));
-          const minC = Math.min(...component.map(([, c]) => c));
-          const maxC = Math.max(...component.map(([, c]) => c));
-          
-          // Create a smooth path around the component
-          const x = minC * cellSize;
-          const y = minR * cellSize;
-          const w = (maxC - minC + 1) * cellSize;
-          const h = (maxR - minR + 1) * cellSize;
-          
-          // Use a smooth rounded rectangle with larger radius for metaball effect
-          const radius = Math.min(roundedCorners * 2, Math.min(w, h) / 2);
-          paths += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${radius}" ry="${radius}" fill="#000"/>`;
+          // Multiple cells - create overlapping rounded rectangles for metaball effect
+          component.forEach(([r, c]) => {
+            const x = c * cellSize;
+            const y = r * cellSize;
+            // Slightly overlap cells for metaball effect
+            const overlap = 0.5;
+            paths += `<rect x="${x - overlap}" y="${y - overlap}" width="${cellSize + overlap * 2}" height="${cellSize + overlap * 2}" rx="${roundedCorners}" ry="${roundedCorners}" fill="#000"/>`;
+          });
         }
       });
       
@@ -306,7 +299,7 @@ const CellularAutomataEditor = () => {
       }
       return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
     }
-  }, [grid, cols, rows, roundedCorners, cellSize]);
+  }, [grid, cols, rows, roundedCorners, cellSize, hasGenerated]);
 
   // Save as SVG
   const saveAsSVG = useCallback(() => {
@@ -466,9 +459,13 @@ const CellularAutomataEditor = () => {
                 max="10"
                 value={roundedCorners}
                 onChange={(e) => setRoundedCorners(Number(e.target.value))}
-                className="w-full"
+                disabled={!hasGenerated}
+                className={`w-full ${!hasGenerated ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
               <div className="text-sm text-gray-600">{roundedCorners}px</div>
+              {!hasGenerated && (
+                <div className="text-xs text-gray-500 mt-1">Generate pattern first to enable rounded corners</div>
+              )}
             </div>
             
             {/* Cell Size Slider */}
@@ -562,12 +559,19 @@ const CellularAutomataEditor = () => {
           {/* Grid Display - Top Aligned */}
           <div className="flex flex-col items-center pt-20 pb-24 px-4">
             <div className="bg-white rounded-lg shadow-sm p-4">
+              {/* Grid background with centered lines */}
               <div 
-                className="mx-auto"
+                className="mx-auto relative"
                 style={{ 
                   display: 'grid',
                   gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
-                  maxWidth: 'fit-content'
+                  maxWidth: 'fit-content',
+                  backgroundImage: `
+                    linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+                    linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
+                  `,
+                  backgroundSize: `${cellSize}px ${cellSize}px`,
+                  backgroundPosition: '0 0'
                 }}
               >
           {grid.map((row, rowIndex) =>
@@ -577,15 +581,17 @@ const CellularAutomataEditor = () => {
                 width: `${cellSize}px`,
                 height: `${cellSize}px`,
                 backgroundColor: cell ? '#000' : '#fff',
-                border: '1px solid #e5e7eb'
+                border: 'none'
               };
               
-              // Hover effect for first row when drawing
-              if (rowIndex === 0 && tool === 'draw' && !cell) {
+              // Hover effect for any cell when drawing/erasing
+              if (tool === 'draw' && !cell) {
                 cellStyle.backgroundColor = '#f3f4f6';
+              } else if (tool === 'erase' && cell) {
+                cellStyle.backgroundColor = '#fee2e2';
               }
               
-              if (roundedCorners > 0 && cell) {
+              if (roundedCorners > 0 && hasGenerated && cell) {
                 // For live preview, we'll use a simpler approach
                 // The SVG export will handle the proper connected component logic
                 const hasTop = rowIndex > 0 && grid[rowIndex - 1] && grid[rowIndex - 1][colIndex];
@@ -607,7 +613,6 @@ const CellularAutomataEditor = () => {
                 else borderRadius += '0px';
                 
                 cellStyle.borderRadius = borderRadius;
-                cellStyle.border = 'none'; // Remove border for rounded cells
               }
               
               return (
