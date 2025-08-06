@@ -12,11 +12,11 @@ const CellularAutomataEditor = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationRow, setAnimationRow] = useState(0);
   const [roundedCorners, setRoundedCorners] = useState(0);
-  const [cellSize, setCellSize] = useState(20);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [selectedRuleInfo, setSelectedRuleInfo] = useState(null);
   const [showRuleDropdown, setShowRuleDropdown] = useState(false);
+  const [cellSize, setCellSize] = useState(20);
   const animationRef = useRef(null);
 
   // Most interesting/known rules
@@ -34,13 +34,13 @@ const CellularAutomataEditor = () => {
   ];
 
   // Rule descriptions for modal
-  const getRuleDescription = (ruleNumber) => {
+  const getRuleDescription = (ruleNumber: number) => {
     const popular = popularRules.find(r => r.number === ruleNumber);
     if (popular) return popular.description;
     
     // Generate basic description based on rule number
     const binary = ruleNumber.toString(2).padStart(8, '0');
-    const activePatterns = [];
+    const activePatterns: string[] = [];
     const patterns = ['111', '110', '101', '100', '011', '010', '001', '000'];
     patterns.forEach((pattern, i) => {
       if (binary[i] === '1') activePatterns.push(pattern);
@@ -50,9 +50,9 @@ const CellularAutomataEditor = () => {
   };
 
   // Generate example pattern for modal
-  const generateExamplePattern = (ruleNumber) => {
+  const generateExamplePattern = (ruleNumber: number) => {
     const size = 14;
-    const exampleGrid = Array(size).fill().map(() => Array(size).fill(false));
+    const exampleGrid = Array(size).fill(null).map(() => Array(size).fill(false));
     
     // Set middle cell in first row
     exampleGrid[0][Math.floor(size / 2)] = true;
@@ -66,15 +66,16 @@ const CellularAutomataEditor = () => {
         const center = exampleGrid[r-1][c];
         const right = exampleGrid[r-1][c+1] || false;
         const pattern = `${left ? '1' : '0'}${center ? '1' : '0'}${right ? '1' : '0'}`;
-        exampleGrid[r][c] = ruleLookup[pattern];
+        exampleGrid[r][c] = ruleLookup[pattern as keyof typeof ruleLookup];
       }
     }
     
     return exampleGrid;
   };
+
   // Initialize empty grid
   useEffect(() => {
-    const newGrid = Array(rows).fill().map((_, i) => 
+    const newGrid = Array(rows).fill(null).map((_, i) => 
       Array(cols).fill(i === 0 ? false : null)
     );
     setGrid(newGrid);
@@ -83,7 +84,7 @@ const CellularAutomataEditor = () => {
   }, [rows, cols]);
 
   // Generate rule lookup table
-  const getRuleLookup = useCallback((ruleNumber) => {
+  const getRuleLookup = useCallback((ruleNumber: number) => {
     const binary = ruleNumber.toString(2).padStart(8, '0');
     return {
       '111': binary[0] === '1',
@@ -98,7 +99,7 @@ const CellularAutomataEditor = () => {
   }, []);
 
   // Apply cellular automata rule
-  const applyRule = useCallback((prevRow, ruleLookup) => {
+  const applyRule = useCallback((prevRow: boolean[], ruleLookup: any) => {
     return prevRow.map((_, i) => {
       const left = prevRow[i - 1] || false;
       const center = prevRow[i];
@@ -109,7 +110,7 @@ const CellularAutomataEditor = () => {
   }, []);
 
   // Handle cell interaction
-  const handleCellInteraction = useCallback((rowIndex, colIndex, isClick = false) => {
+  const handleCellInteraction = useCallback((rowIndex: number, colIndex: number, isClick = false) => {
     if (rowIndex !== 0) return; // Only allow editing first row
     
     setGrid(prev => {
@@ -125,7 +126,7 @@ const CellularAutomataEditor = () => {
   const generateRandomSeed = useCallback(() => {
     setGrid(prev => {
       const newGrid = [...prev];
-      newGrid[0] = Array(cols).fill().map(() => Math.random() > 0.5);
+      newGrid[0] = Array(cols).fill(null).map(() => Math.random() > 0.5);
       // Reset other rows
       for (let i = 1; i < rows; i++) {
         newGrid[i] = Array(cols).fill(null);
@@ -144,7 +145,7 @@ const CellularAutomataEditor = () => {
     setIsAnimating(true);
     setAnimationRow(1);
     
-    const animate = (currentRow) => {
+    const animate = (currentRow: number) => {
       if (currentRow >= rows) {
         setIsAnimating(false);
         setHasGenerated(true);
@@ -185,7 +186,7 @@ const CellularAutomataEditor = () => {
 
   // Clear everything including first row
   const clearAll = useCallback(() => {
-    setGrid(Array(rows).fill().map((_, i) => 
+    setGrid(Array(rows).fill(null).map((_, i) => 
       Array(cols).fill(i === 0 ? false : null)
     ));
     setHasGenerated(false);
@@ -195,6 +196,7 @@ const CellularAutomataEditor = () => {
     }
     setIsAnimating(false);
   }, [rows, cols]);
+
   // Reset image only
   const resetImage = useCallback(() => {
     setGrid(prev => {
@@ -213,7 +215,7 @@ const CellularAutomataEditor = () => {
   }, [rows, cols]);
 
   // Show rule info modal
-  const showRuleInfo = (ruleNumber) => {
+  const showRuleInfo = (ruleNumber: number) => {
     setSelectedRuleInfo(ruleNumber);
     setShowRuleModal(true);
   };
@@ -225,7 +227,7 @@ const CellularAutomataEditor = () => {
     
     if (roundedCorners > 0 && hasGenerated) {
       // Create a binary matrix for filled cells
-      const matrix = Array(rows).fill().map(() => Array(cols).fill(false));
+      const matrix = Array(rows).fill(null).map(() => Array(cols).fill(false));
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (grid[r] && grid[r][c]) {
@@ -235,17 +237,17 @@ const CellularAutomataEditor = () => {
       }
       
       // Find all connected components using flood fill
-      const visited = Array(rows).fill().map(() => Array(cols).fill(false));
-      const components = [];
+      const visited = Array(rows).fill(null).map(() => Array(cols).fill(false));
+      const components: number[][][] = [];
       
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (matrix[r][c] && !visited[r][c]) {
-            const component = [];
-            const stack = [[r, c]];
+            const component: number[][] = [];
+            const stack: number[][] = [[r, c]];
             
             while (stack.length > 0) {
-              const [cr, cc] = stack.pop();
+              const [cr, cc] = stack.pop()!;
               if (cr < 0 || cr >= rows || cc < 0 || cc >= cols || 
                   visited[cr][cc] || !matrix[cr][cc]) continue;
               
@@ -336,258 +338,198 @@ const CellularAutomataEditor = () => {
     .filter(r => r.toString().includes(ruleSearch));
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Main Layout - Horizontal on wide screens, vertical on tall screens */}
-      <div className="flex flex-col lg:flex-row min-h-screen">
+    <div className="w-full max-w-6xl mx-auto p-6 bg-white">
+      {/* Header Controls */}
+      <div className="mb-6 flex flex-wrap gap-4 items-center justify-between">
+        <h1 className="text-2xl font-bold">Cellular Automata Pattern Generator</h1>
+        <button
+          onClick={resetToDefaults}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+        >
+          <RotateCcw size={16} />
+          Reset Settings
+        </button>
+      </div>
+
+      {/* Configuration Panel */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+        <div>
+          <label className="block text-sm font-medium mb-2">Columns</label>
+          <input
+            type="number"
+            min="5"
+            max="50"
+            value={cols}
+            onChange={(e) => setCols(Number(e.target.value))}
+            className="w-full px-3 py-2 border rounded-lg"
+          />
+        </div>
         
-        {/* Settings Panel - Fixed width on left */}
-        <div className="w-full lg:w-[460px] lg:min-w-[460px] bg-white border-r border-gray-200 p-6">
-          {/* Header */}
-          <h1 className="text-2xl font-bold mb-6">Cellular Automata Patterns Generation</h1>
-          
-          {/* Settings Section */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <label className="text-lg font-medium">Settings</label>
-              {(cols !== 14 || rows !== 14 || rule !== 30 || roundedCorners !== 0 || cellSize !== 20) && (
-                <button
-                  onClick={resetToDefaults}
-                  className="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                >
-                  <RotateCcw size={14} />
-                  Reset Settings
-                </button>
-              )}
-            </div>
-            
-            {/* Columns and Rows */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Columns</label>
-                <input
-                  type="number"
-                  min="5"
-                  max="50"
-                  value={cols}
-                  onChange={(e) => setCols(Number(e.target.value))}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Rows</label>
-                <input
-                  type="number"
-                  min="5"
-                  max="50"
-                  value={rows}
-                  onChange={(e) => setRows(Number(e.target.value))}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-            </div>
-            
-            {/* Rule Search */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Search Rules</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search rules..."
-                  value={ruleSearch}
-                  onChange={(e) => setRuleSearch(e.target.value)}
-                  onFocus={() => setShowRuleDropdown(true)}
-                  className="w-full pl-10 pr-3 py-2 border rounded-lg"
-                />
-                {showRuleDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto">
-                    {filteredRules.map(r => (
-                      <div
-                        key={r}
-                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                        onClick={() => {
-                          setRule(r);
-                          setRuleSearch('');
-                          setShowRuleDropdown(false);
-                        }}
-                      >
-                        <span>Rule {r}</span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            showRuleInfo(r);
-                          }}
-                          className="text-blue-500 hover:text-blue-700"
-                        >
-                          <Info size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Popular Rules Pills - Bigger */}
-            <div className="mb-6">
-              <div className="flex flex-wrap gap-2">
-                {popularRules.map(({ number, name }) => (
-                  <button
-                    key={number}
-                    onClick={() => setRule(number)}
-                    className={`inline-flex items-center gap-2 px-3 py-2 text-sm rounded-full transition-colors ${
-                      rule === number 
-                        ? 'bg-blue-500 text-white' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
+        <div>
+          <label className="block text-sm font-medium mb-2">Rows</label>
+          <input
+            type="number"
+            min="5"
+            max="50"
+            value={rows}
+            onChange={(e) => setRows(Number(e.target.value))}
+            className="w-full px-3 py-2 border rounded-lg"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium mb-2">Rule</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search rules..."
+              value={ruleSearch}
+              onChange={(e) => setRuleSearch(e.target.value)}
+              onFocus={() => setShowRuleDropdown(true)}
+              className="w-full pl-10 pr-3 py-2 border rounded-lg"
+            />
+            {showRuleDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto">
+                {filteredRules.map(r => (
+                  <div
+                    key={r}
+                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                    onClick={() => {
+                      setRule(r);
+                      setRuleSearch('');
+                      setShowRuleDropdown(false);
+                    }}
                   >
-                    {number}
+                    <span>Rule {r}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        showRuleInfo(number);
+                        showRuleInfo(r);
                       }}
-                      className="hover:bg-blue-600 rounded-full p-1"
+                      className="text-blue-500 hover:text-blue-700"
                     >
-                      <Info size={12} />
+                      <Info size={14} />
                     </button>
-                  </button>
+                  </div>
                 ))}
-              </div>
-            </div>
-            
-            {/* Rounded Corners Slider */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Rounded Corners</label>
-              <input
-                type="range"
-                min="0"
-                max="10"
-                value={roundedCorners}
-                onChange={(e) => setRoundedCorners(Number(e.target.value))}
-                disabled={!hasGenerated}
-                className={`w-full ${!hasGenerated ? 'opacity-50 cursor-not-allowed' : ''}`}
-              />
-              <div className="text-sm text-gray-600">{roundedCorners}px</div>
-              {!hasGenerated && (
-                <div className="text-xs text-gray-500 mt-1">Generate pattern first to enable rounded corners</div>
-              )}
-            </div>
-            
-            {/* Cell Size Slider */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Cell Size</label>
-              <input
-                type="range"
-                min="8"
-                max="32"
-                step="2"
-                value={cellSize}
-                onChange={(e) => setCellSize(Number(e.target.value))}
-                className="w-full"
-              />
-              <div className="text-sm text-gray-600">{cellSize}px</div>
-            </div>
-            
-
-          </div>
-        </div>
-        
-        {/* Preview Area - Takes remaining space */}
-        <div className="flex-1 bg-gray-50 relative">
-          {/* Top Tool Bar */}
-          <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setTool('draw')}
-                className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
-                  tool === 'draw' ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-100 shadow-sm'
-                }`}
-                title="Draw"
-              >
-                <Pencil size={16} />
-              </button>
-              
-              <button
-                onClick={() => setTool('erase')}
-                className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
-                  tool === 'erase' ? 'bg-red-500 text-white' : 'bg-white hover:bg-gray-100 shadow-sm'
-                }`}
-                title="Erase"
-              >
-                <Eraser size={16} />
-              </button>
-              
-              <button
-                onClick={generateRandomSeed}
-                className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-100 shadow-sm rounded-lg transition-colors"
-                title="Random"
-              >
-                <Shuffle size={16} />
-                Random
-              </button>
-            </div>
-            
-            {/* Generate Pattern - Centered */}
-            <div className="absolute left-1/2 transform -translate-x-1/2">
-              <button
-                onClick={generatePattern}
-                disabled={isAnimating}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors"
-                title="Generate Pattern"
-              >
-                <Play size={16} />
-                {isAnimating ? 'Generating...' : 'Generate Pattern'}
-              </button>
-            </div>
-            
-            {hasGenerated && (
-              <div className="flex gap-2">
-                <button
-                  onClick={resetImage}
-                  className="flex items-center justify-center w-10 h-10 bg-white hover:bg-gray-100 shadow-sm rounded-lg transition-colors"
-                  title="Reset Image"
-                >
-                  <RotateCcw size={16} />
-                </button>
-                
-                <button
-                  onClick={clearAll}
-                  className="flex items-center justify-center w-10 h-10 bg-white hover:bg-gray-100 shadow-sm rounded-lg transition-colors"
-                  title="Clear All"
-                >
-                  <Trash2 size={16} />
-                </button>
               </div>
             )}
           </div>
           
-          {/* Grid Display - Top Aligned */}
-          <div className="flex flex-col items-center pt-20 pb-24 px-4">
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              {/* Grid background with centered lines */}
-              <div 
-                className="mx-auto relative"
-                style={{ 
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
-                  maxWidth: 'fit-content',
-                  backgroundImage: `
-                    linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-                    linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
-                  `,
-                  backgroundSize: `${cellSize}px ${cellSize}px`,
-                  backgroundPosition: '0 0'
-                }}
+          {/* Popular Rules Pills */}
+          <div className="mt-2 flex flex-wrap gap-1">
+            {popularRules.map(({ number, name }) => (
+              <button
+                key={number}
+                onClick={() => setRule(number)}
+                className={`inline-flex items-center gap-1 px-3 py-2 text-sm rounded-full transition-colors ${
+                  rule === number 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
               >
+                {number}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    showRuleInfo(number);
+                  }}
+                  className="hover:bg-blue-600 rounded-full p-0.5"
+                >
+                  <Info size={12} />
+                </button>
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium mb-2">Cell Size</label>
+          <input
+            type="range"
+            min="8"
+            max="32"
+            step="2"
+            value={cellSize}
+            onChange={(e) => setCellSize(Number(e.target.value))}
+            className="w-full"
+          />
+          <div className="text-sm text-gray-600">{cellSize}px</div>
+        </div>
+      </div>
+
+      {/* Tools */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setTool('draw')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            tool === 'draw' ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
+          }`}
+        >
+          <Pencil size={16} />
+          Draw
+        </button>
+        
+        <button
+          onClick={() => setTool('erase')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            tool === 'erase' ? 'bg-red-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
+          }`}
+        >
+          <Eraser size={16} />
+          Erase
+        </button>
+        
+        <button
+          onClick={generateRandomSeed}
+          className="flex items-center gap-2 px-4 py-2 bg-green-100 hover:bg-green-200 rounded-lg transition-colors"
+        >
+          <Shuffle size={16} />
+          Random
+        </button>
+        
+        {hasGenerated && (
+          <>
+            <button
+              onClick={resetImage}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-100 hover:bg-orange-200 rounded-lg transition-colors"
+            >
+              <RotateCcw size={16} />
+              Reset Image
+            </button>
+            
+            <button
+              onClick={clearAll}
+              className="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
+            >
+              <Trash2 size={16} />
+              Clear All
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Grid Display */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg overflow-auto relative">
+        <div 
+          className="mx-auto"
+          style={{ 
+            display: 'grid',
+            gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
+            maxWidth: 'fit-content',
+            backgroundImage: 'linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)',
+            backgroundSize: `${cellSize}px ${cellSize}px`,
+            backgroundPosition: '0 0'
+          }}
+        >
           {grid.map((row, rowIndex) =>
             row.map((cell, colIndex) => {
               // Apply hover and cell styling
               let cellStyle = {
                 width: `${cellSize}px`,
                 height: `${cellSize}px`,
-                backgroundColor: cell ? '#000' : '#fff',
+                backgroundColor: cell ? '#000' : 'transparent',
                 border: 'none'
               };
               
@@ -596,7 +538,7 @@ const CellularAutomataEditor = () => {
                 if (tool === 'draw' && !cell) {
                   cellStyle.backgroundColor = '#000'; // Show as filled on hover
                 } else if (tool === 'erase' && cell) {
-                  cellStyle.backgroundColor = '#fff'; // Show as empty on hover
+                  cellStyle.backgroundColor = 'transparent'; // Show as empty on hover
                 }
               }
               
@@ -627,9 +569,7 @@ const CellularAutomataEditor = () => {
               return (
                 <div
                   key={`${rowIndex}-${colIndex}`}
-                  className={`cursor-pointer transition-all ${
-                    rowIndex === 0 ? 'hover:bg-gray-200' : ''
-                  }`}
+                  className="cursor-pointer transition-all"
                   style={cellStyle}
                   onMouseDown={() => {
                     if (rowIndex === 0) {
@@ -643,14 +583,27 @@ const CellularAutomataEditor = () => {
               );
             })
           )}
-            </div>
-          </div>
         </div>
         
         {/* Floating Bottom Bar - Centered in preview area */}
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20">
           <div className="max-w-[560px] w-full mx-2 bg-white rounded-lg shadow-lg border">
             <div className="flex items-center justify-center gap-4 p-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Rounded Corners:</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  value={roundedCorners}
+                  onChange={(e) => setRoundedCorners(Number(e.target.value))}
+                  disabled={!hasGenerated}
+                  className="w-24"
+                />
+                <span className="text-sm text-gray-600 w-8">{roundedCorners}px</span>
+                {!hasGenerated && <span className="text-xs text-gray-500">(Generate pattern first)</span>}
+              </div>
+              
               <button
                 onClick={saveAsSVG}
                 className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
@@ -670,7 +623,18 @@ const CellularAutomataEditor = () => {
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Generate Button */}
+      <div className="flex justify-center mb-20">
+        <button
+          onClick={generatePattern}
+          disabled={isAnimating}
+          className="flex items-center gap-2 px-8 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors text-lg font-medium"
+        >
+          <Play size={20} />
+          {isAnimating ? 'Generating...' : 'Generate Pattern'}
+        </button>
+      </div>
 
       {/* Rule Info Modal */}
       {showRuleModal && selectedRuleInfo !== null && (
