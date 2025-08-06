@@ -218,7 +218,7 @@ const CellularAutomataEditor = () => {
     setShowRuleModal(true);
   };
 
-  // Generate SVG with proper connected shapes
+  // Generate SVG with proper connected shapes and rounded corners
   const generateSVG = useCallback(() => {
     const width = cols * cellSize;
     const height = rows * cellSize;
@@ -234,14 +234,13 @@ const CellularAutomataEditor = () => {
         }
       }
       
-      // Find all connected components
+      // Find all connected components using flood fill
       const visited = Array(rows).fill().map(() => Array(cols).fill(false));
       const components = [];
       
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (matrix[r][c] && !visited[r][c]) {
-            // Find connected component using flood fill
             const component = [];
             const stack = [[r, c]];
             
@@ -264,7 +263,7 @@ const CellularAutomataEditor = () => {
         }
       }
       
-      // Generate SVG path for each component
+      // Generate SVG path for each component with proper rounded corners
       let paths = '';
       components.forEach(component => {
         if (component.length === 1) {
@@ -274,13 +273,12 @@ const CellularAutomataEditor = () => {
           const y = r * cellSize;
           paths += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="${roundedCorners}" ry="${roundedCorners}" fill="#000"/>`;
         } else {
-          // Multiple cells - create a single path
+          // Multiple cells - create a single rounded rectangle for the entire component
           const minR = Math.min(...component.map(([r]) => r));
           const maxR = Math.max(...component.map(([r]) => r));
           const minC = Math.min(...component.map(([, c]) => c));
           const maxC = Math.max(...component.map(([, c]) => c));
           
-          // Create a single rounded rectangle for the entire component
           const x = minC * cellSize;
           const y = minR * cellSize;
           const w = (maxC - minC + 1) * cellSize;
@@ -517,16 +515,19 @@ const CellularAutomataEditor = () => {
               <button
                 onClick={generateRandomSeed}
                 className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-100 shadow-sm rounded-lg transition-colors"
-                title="Random Seed"
+                title="Random"
               >
                 <Shuffle size={16} />
-                Random Seed
+                Random
               </button>
-              
+            </div>
+            
+            {/* Generate Pattern - Centered */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
               <button
                 onClick={generatePattern}
                 disabled={isAnimating}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors"
                 title="Generate Pattern"
               >
                 <Play size={16} />
