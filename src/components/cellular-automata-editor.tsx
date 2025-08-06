@@ -21,16 +21,16 @@ const CellularAutomataEditor = () => {
 
   // Most interesting/known rules
   const popularRules = [
-    { number: 30, name: "Rule 30", description: "Chaotic pattern generator, used in Mathematica's random number generator" },
-    { number: 90, name: "Rule 90", description: "Sierpinski triangle generator, creates fractal patterns" },
-    { number: 110, name: "Rule 110", description: "Turing complete, capable of universal computation" },
-    { number: 184, name: "Rule 184", description: "Traffic flow model, simulates highway traffic patterns" },
-    { number: 150, name: "Rule 150", description: "Additive cellular automaton, creates nested patterns" },
-    { number: 54, name: "Rule 54", description: "Creates complex triangular structures" },
-    { number: 126, name: "Rule 126", description: "Produces dense, chaotic patterns" },
-    { number: 18, name: "Rule 18", description: "Simple fractal generator with clear structure" },
-    { number: 22, name: "Rule 22", description: "Periodic patterns with interesting symmetries" },
-    { number: 73, name: "Rule 73", description: "Complex boundary behavior with localized structures" }
+    { number: 30, name: "Rule 30", description: "Chaotic pattern generator" },
+    { number: 90, name: "Rule 90", description: "Sierpinski triangle generator" },
+    { number: 110, name: "Rule 110", description: "Turing complete" },
+    { number: 184, name: "Rule 184", description: "Traffic flow model" },
+    { number: 150, name: "Rule 150", description: "Additive cellular automaton" },
+    { number: 54, name: "Rule 54", description: "Complex triangular structures" },
+    { number: 126, name: "Rule 126", description: "Dense, chaotic patterns" },
+    { number: 18, name: "Rule 18", description: "Simple fractal generator" },
+    { number: 22, name: "Rule 22", description: "Periodic patterns" },
+    { number: 73, name: "Rule 73", description: "Complex boundary behavior" }
   ];
 
   // Initialize empty grid
@@ -71,7 +71,7 @@ const CellularAutomataEditor = () => {
 
   // Handle cell interaction
   const handleCellInteraction = useCallback((rowIndex: number, colIndex: number, isClick = false) => {
-    if (rowIndex !== 0) return; // Only allow editing first row
+    if (rowIndex !== 0) return;
     
     setGrid(prev => {
       const newGrid = [...prev];
@@ -87,7 +87,6 @@ const CellularAutomataEditor = () => {
     setGrid(prev => {
       const newGrid = [...prev];
       newGrid[0] = Array(cols).fill(null).map(() => Math.random() > 0.5);
-      // Reset other rows
       for (let i = 1; i < rows; i++) {
         newGrid[i] = Array(cols).fill(null);
       }
@@ -180,7 +179,7 @@ const CellularAutomataEditor = () => {
     setShowRuleModal(true);
   };
 
-  // Generate SVG with true metaball-like smooth shapes
+  // Generate SVG
   const generateSVG = useCallback(() => {
     const width = cols * cellSize;
     const height = rows * cellSize;
